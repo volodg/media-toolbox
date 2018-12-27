@@ -1,0 +1,7 @@
+[package]
+name = "controller"
+version = "0.1.0"
+authors = ["volodymyr.gorbenko"]
+edition = "2018"
+
+[dependencies]
