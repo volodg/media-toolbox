@@ -41,11 +41,11 @@ impl Handler<CreateUser> for DbExecutor {
             about: &msg.about,
         };
 
-        let conn: &PgConnection = &self.0.get().unwrap();
+        let conn = &self.0.get().unwrap();
 
         let result = diesel::insert_into(users)
             .values(&new_user)
-            .get_result::<models::User>(conn)
+            .get_result(conn)
             .map_err(|_| error::ErrorInternalServerError("Error inserting person"))?;
 
         Ok(result)

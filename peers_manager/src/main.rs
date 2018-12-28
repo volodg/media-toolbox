@@ -14,8 +14,6 @@ extern crate env_logger;
 extern crate futures;
 extern crate r2d2;
 
-//use actix_web::{App, Json, Result, http};
-
 use actix::prelude::*;
 use actix_web::{
     http, middleware, server, App, AsyncResponder, FutureResponse, HttpResponse,
@@ -91,5 +89,3 @@ fn main() {
     println!("Started http server: 127.0.0.1:8080");
     let _ = sys.run();
 }
-
-//curl -X GET http://127.0.0.1:8080/test_name
