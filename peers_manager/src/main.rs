@@ -24,11 +24,11 @@ use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use futures::Future;
 
-mod db;
+mod users_db;
 mod models;
 mod schema;
 
-use db::{CreateUser, DbExecutor};
+use users_db::{CreateUser, LoginWithEmail, DbExecutor};
 
 /// State with DbExecutor address
 struct AppState {
@@ -63,7 +63,7 @@ fn create_user(
 }
 
 fn login_user(
-    (login, state): (Json<db::LoginWithEmail>, State<AppState>),
+    (login, state): (Json<LoginWithEmail>, State<AppState>),
 ) -> FutureResponse<HttpResponse> {
     // send async `LoginWithEmail` message to a `DbExecutor`
     state
