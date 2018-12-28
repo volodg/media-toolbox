@@ -86,3 +86,32 @@ impl Handler<LoginWithEmail> for DbExecutor {
         Ok(result)
     }
 }
+
+#[derive(Deserialize)]
+pub struct SearchWithKeyword {
+    pub keyword: String,
+}
+
+impl Message for SearchWithKeyword {
+    type Result = Result<Vec<models::User>, Error>;
+}
+
+impl Handler<SearchWithKeyword> for DbExecutor {
+    type Result = Result<Vec<models::User>, Error>;
+
+    fn handle(&mut self, msg: SearchWithKeyword, _: &mut Self::Context) -> Self::Result {
+        use self::schema::users::dsl::*;
+
+        let conn = &self.0.get().unwrap();
+
+        let enquoted_keyword = enquote::enquote('%', &msg.keyword);
+
+        let results = schema::users::table
+            .filter(name.like(&enquoted_keyword).or(about.like(&enquoted_keyword)).or(email.eq(&msg.keyword)))
+            .get_results::<models::User>(conn)
+            .map_err(|_| error::ErrorInternalServerError("Error user search"))?;
+
+        Ok(results)
+    }
+}
+

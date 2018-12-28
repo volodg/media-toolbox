@@ -77,6 +77,21 @@ fn login_user(
         .responder()
 }
 
+fn user_search(
+    (search, state): (Json<users_db::SearchWithKeyword>, State<AppState>),
+) -> FutureResponse<HttpResponse> {
+    // send async `SearchWithKeyword` message to a `DbExecutor`
+    state
+        .db
+        .send(search.into_inner())
+        .from_err()
+        .and_then(|res| match res {
+            Ok(user) => Ok(HttpResponse::Ok().json(user)),
+            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        })
+        .responder()
+}
+
 fn main() {
     ::std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
@@ -97,6 +112,7 @@ fn main() {
             .middleware(middleware::Logger::default())
             .resource("/users/create_user", |r| r.method(http::Method::POST).with(create_user))
             .resource("/users/login", |r| r.method(http::Method::POST).with(login_user))
+            .resource("/users/search", |r| r.method(http::Method::POST).with(user_search))
     }).bind("127.0.0.1:8080")
         .unwrap()
         .start();

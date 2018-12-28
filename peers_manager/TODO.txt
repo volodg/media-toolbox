@@ -8,7 +8,12 @@
 
 4 Add index to db "email" column
 
+4.1 Investigate http errors
+4.2 Refactor search to get method
+
 5. Add envs (test, staging, prod)
 6. Add integration/unit tests
 7. Register user
 8. Create band
+9. Investigate SQL injection
+10. Add normal Registration/Auth

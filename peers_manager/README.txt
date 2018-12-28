@@ -17,3 +17,10 @@ http://127.0.0.1:8080/users/login \
 -H 'Content-Type: application/json' \
 -H 'auth-token: <your auth token>' \
 -d '{"email": "email1"}'
+
+User search:
+curl -X POST \
+http://127.0.0.1:8080/users/search \
+-H 'Content-Type: application/json' \
+-H 'auth-token: <your auth token>' \
+-d '{"keywork": "email"}'
