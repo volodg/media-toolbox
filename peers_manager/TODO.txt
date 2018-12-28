@@ -1,7 +1,7 @@
 
 1. Add model&methods&tests for User
 
-1.1 Implement login - doing
+1.2 test create/login/search - doing
 
 2. Add model&methods&tests for Event
 3. Add model&methods&tests for Invite
