@@ -1,8 +1,8 @@
 table! {
-    users {
+    users (id) {
         id -> BigInt,
         name -> Text,
-        email -> Text,
         about -> Text,
+        email -> Text,
     }
 }
