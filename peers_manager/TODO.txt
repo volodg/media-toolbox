@@ -1,6 +1,11 @@
 
-1. Migrate to posgress or mysql
-2. Add envs (test, staging, prod)
-3. Add integration/unit tests
-4. Register user
-5. Create band
+1. Migrate to posgress or mysql - doing
+
+2. Add model&methods&tests for User
+3. Add model&methods&tests for Event
+4. Add model&methods&tests for Invite
+
+5. Add envs (test, staging, prod)
+6. Add integration/unit tests
+7. Register user
+8. Create band

@@ -1,4 +1,8 @@
-CREATE TABLE users (
-  id VARCHAR NOT NULL PRIMARY KEY,
-  name VARCHAR NOT NULL
-)
+CREATE TABLE users
+(
+    id BIGSERIAL PRIMARY KEY,
+    name text NOT NULL,
+    about text NOT NULL,
+    email text NOT NULL,
+    CONSTRAINT email UNIQUE (email)
+);

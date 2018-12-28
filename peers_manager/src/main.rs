@@ -17,10 +17,12 @@ extern crate futures;
 extern crate r2d2;
 extern crate uuid;
 
+//use actix_web::{App, Json, Result, http};
+
 use actix::prelude::*;
 use actix_web::{
-    http, middleware, server, App, AsyncResponder, FutureResponse, HttpResponse, Path,
-    State,
+    http, middleware, server, App, AsyncResponder, FutureResponse, HttpRequest, HttpResponse, Path,
+    State, Json, Result, Form,
 };
 
 use diesel::prelude::*;
@@ -38,15 +40,24 @@ struct AppState {
     db: Addr<DbExecutor>,
 }
 
+#[derive(Deserialize)]
+struct NewUserInput {
+    pub name: String,
+    pub email: String,
+    pub about: String,
+}
+
 /// Async request handler
-fn index(
-    (name, state): (Path<String>, State<AppState>),
+fn create_user(
+    (new_user, state): (Json<NewUserInput>, State<AppState>),
 ) -> FutureResponse<HttpResponse> {
     // send async `CreateUser` message to a `DbExecutor`
     state
         .db
         .send(CreateUser {
-            name: name.into_inner(),
+            name: new_user.name.clone(),
+            email: new_user.email.clone(),
+            about: new_user.about.clone(),
         })
         .from_err()
         .and_then(|res| match res {
@@ -62,7 +73,8 @@ fn main() {
     let sys = actix::System::new("diesel-example");
 
     // Start 3 db executor actors
-    let manager = ConnectionManager::<SqliteConnection>::new("test.db");
+    let database_url = "postgres://postgres:docker@localhost:5432/peers_test";
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool.");
@@ -74,7 +86,7 @@ fn main() {
         App::with_state(AppState{db: addr.clone()})
             // enable logger
             .middleware(middleware::Logger::default())
-            .resource("/{name}", |r| r.method(http::Method::GET).with(index))
+            .resource("/create_user", |r| r.method(http::Method::POST).with(create_user))
     }).bind("127.0.0.1:8080")
         .unwrap()
         .start();

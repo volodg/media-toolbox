@@ -12,12 +12,14 @@ use models;
 use schema;
 
 /// This is db executor actor. We are going to run 3 of them in parallel.
-pub struct DbExecutor(pub Pool<ConnectionManager<SqliteConnection>>);
+pub struct DbExecutor(pub Pool<ConnectionManager<PgConnection>>);
 
 /// This is only message that this actor can handle, but it is easy to extend
 /// number of messages.
 pub struct CreateUser {
     pub name: String,
+    pub email: String,
+    pub about: String,
 }
 
 impl Message for CreateUser {
@@ -34,24 +36,19 @@ impl Handler<CreateUser> for DbExecutor {
     fn handle(&mut self, msg: CreateUser, _: &mut Self::Context) -> Self::Result {
         use self::schema::users::dsl::*;
 
-        let uuid = format!("{}", uuid::Uuid::new_v4());
         let new_user = models::NewUser {
-            id: &uuid,
             name: &msg.name,
+            email: &msg.email,
+            about: &msg.about,
         };
 
-        let conn: &SqliteConnection = &self.0.get().unwrap();
+        let conn: &PgConnection = &self.0.get().unwrap();
 
-        diesel::insert_into(users)
+        let result = diesel::insert_into(users)
             .values(&new_user)
-            .execute(conn)
+            .get_result::<models::User>(conn)
             .map_err(|_| error::ErrorInternalServerError("Error inserting person"))?;
 
-        let mut items = users
-            .filter(id.eq(&uuid))
-            .load::<models::User>(conn)
-            .map_err(|_| error::ErrorInternalServerError("Error loading person"))?;
-
-        Ok(items.pop().unwrap())
+        Ok(result)
     }
 }
