@@ -51,3 +51,38 @@ impl Handler<CreateUser> for DbExecutor {
         Ok(result)
     }
 }
+
+#[derive(Deserialize)]
+pub struct LoginWithEmail {
+    pub email: String,
+}
+
+#[derive(Serialize)]
+pub struct LoginResponse {
+    pub token: Option<i64>,
+}
+
+impl Message for LoginWithEmail {
+    type Result = Result<LoginResponse, Error>;
+}
+
+impl Handler<LoginWithEmail> for DbExecutor {
+    type Result = Result<LoginResponse, Error>;
+
+    fn handle(&mut self, msg: LoginWithEmail, _: &mut Self::Context) -> Self::Result {
+        use self::schema::users::dsl::*;
+
+        let conn = &self.0.get().unwrap();
+
+        let token = schema::users::table
+            .filter(email.eq(msg.email))
+            .select(id)
+            .first(conn)
+            .optional()
+            .map_err(|_| error::ErrorInternalServerError("Error login with email"))?;
+
+        let result = LoginResponse { token };
+
+        Ok(result)
+    }
+}

@@ -1,9 +1,12 @@
 
-1. Migrate to posgress or mysql - doing
+1. Add model&methods&tests for User
 
-2. Add model&methods&tests for User
-3. Add model&methods&tests for Event
-4. Add model&methods&tests for Invite
+1.1 Implement login - doing
+
+2. Add model&methods&tests for Event
+3. Add model&methods&tests for Invite
+
+4 Add index to db "email" column
 
 5. Add envs (test, staging, prod)
 6. Add integration/unit tests

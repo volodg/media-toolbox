@@ -37,9 +37,9 @@ struct AppState {
 
 #[derive(Deserialize)]
 struct NewUserInput {
-    pub name: String,
-    pub email: String,
-    pub about: String,
+    name: String,
+    email: String,
+    about: String,
 }
 
 /// Async request handler
@@ -54,6 +54,21 @@ fn create_user(
             email: new_user.email.clone(),
             about: new_user.about.clone(),
         })
+        .from_err()
+        .and_then(|res| match res {
+            Ok(user) => Ok(HttpResponse::Ok().json(user)),
+            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+        })
+        .responder()
+}
+
+fn login_user(
+    (login, state): (Json<db::LoginWithEmail>, State<AppState>),
+) -> FutureResponse<HttpResponse> {
+    // send async `LoginWithEmail` message to a `DbExecutor`
+    state
+        .db
+        .send(login.into_inner())
         .from_err()
         .and_then(|res| match res {
             Ok(user) => Ok(HttpResponse::Ok().json(user)),
@@ -79,9 +94,9 @@ fn main() {
     // Start http server
     server::new(move || {
         App::with_state(AppState{db: addr.clone()})
-            // enable logger
             .middleware(middleware::Logger::default())
-            .resource("/create_user", |r| r.method(http::Method::POST).with(create_user))
+            .resource("/users/create_user", |r| r.method(http::Method::POST).with(create_user))
+            .resource("/users/login", |r| r.method(http::Method::POST).with(login_user))
     }).bind("127.0.0.1:8080")
         .unwrap()
         .start();
