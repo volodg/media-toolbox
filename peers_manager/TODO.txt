@@ -1,0 +1,6 @@
+
+1. Migrate to posgress or mysql
+2. Add envs (test, staging, prod)
+3. Add integration/unit tests
+4. Register user
+5. Create band
