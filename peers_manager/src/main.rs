@@ -13,7 +13,6 @@ extern crate actix_web;
 extern crate env_logger;
 extern crate futures;
 extern crate r2d2;
-extern crate uuid;
 
 //use actix_web::{App, Json, Result, http};
 
