@@ -24,11 +24,11 @@ use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use futures::Future;
 
-mod users_db;
+mod db;
 mod models;
 mod schema;
 
-use users_db::{CreateUser, LoginWithEmail, DbExecutor};
+use db::users::{CreateUser, LoginWithEmail, SearchWithKeyword, DbExecutor};
 
 /// State with DbExecutor address
 struct AppState {
@@ -78,7 +78,7 @@ fn login_user(
 }
 
 fn user_search(
-    (search, state): (Json<users_db::SearchWithKeyword>, State<AppState>),
+    (search, state): (Json<SearchWithKeyword>, State<AppState>),
 ) -> FutureResponse<HttpResponse> {
     // send async `SearchWithKeyword` message to a `DbExecutor`
     state
