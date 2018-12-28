@@ -27,6 +27,11 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "options": {
+                "env": {
+                    "RUSTFLAGS": "-Aproc-macro-derive-resolution-fallback",
+                }
             }
         },
         {

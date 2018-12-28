@@ -6,10 +6,8 @@
 //! of them can run in parallel and process messages from same queue.
 extern crate serde;
 extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate diesel;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate diesel;
 extern crate actix;
 extern crate actix_web;
 extern crate env_logger;
@@ -21,8 +19,8 @@ extern crate uuid;
 
 use actix::prelude::*;
 use actix_web::{
-    http, middleware, server, App, AsyncResponder, FutureResponse, HttpRequest, HttpResponse, Path,
-    State, Json, Result, Form,
+    http, middleware, server, App, AsyncResponder, FutureResponse, HttpResponse,
+    State, Json,
 };
 
 use diesel::prelude::*;
