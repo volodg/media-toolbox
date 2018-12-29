@@ -4,13 +4,23 @@ use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
 
-use super::super::db::users::{CreateUser, LoginWithEmail, SearchWithKeyword};
+use super::super::db::users::{CreateUser, CreateUserError, LoginWithEmail, SearchWithKeyword};
 
 #[derive(Deserialize, Serialize)]
 pub struct NewUserInput {
     name: String,
     email: String,
     about: String,
+}
+
+enum CreateUserErrorCode {
+    UserAlreadyExists,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CreateUserHttpError {
+    code: u32,
+    details: String,
 }
 
 /// Async request handler
@@ -25,11 +35,27 @@ pub fn create_user(
             email: new_user.email.clone(),
             about: new_user.about.clone(),
         })
-        .from_err()
         .and_then(|res| match res {
             Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            Err(error) => {
+                use http::StatusCode;
+                Ok(match error {
+                    CreateUserError::UserAlreadyExists => {
+                        let response = HttpResponse::new(StatusCode::BAD_REQUEST);
+                        let mut builder = response.into_builder();
+
+                        let error = CreateUserHttpError {
+                            code: CreateUserErrorCode::UserAlreadyExists as u32,
+                            details: "user already exists".to_string(),
+                        };
+
+                        builder.json(error)
+                    }
+                    CreateUserError::DbError(_) => HttpResponse::InternalServerError().into(),
+                })
+            }
         })
+        .from_err()
         .responder()
 }
 
@@ -38,6 +64,7 @@ mod tests_tools {
     extern crate mime;
 
     use super::*;
+    use actix_web::client::ClientResponse;
     use actix_web::test::TestServer;
     use db::users::DbExecutor;
     use diesel::prelude::*;
@@ -77,11 +104,11 @@ mod tests_tools {
     }
 
     pub trait UsersWebMethods {
-        fn create_user(&mut self, new_user: NewUserInput) -> actix_web::client::ClientResponse;
+        fn create_user(&mut self, new_user: NewUserInput) -> ClientResponse;
     }
 
     impl UsersWebMethods for TestServer {
-        fn create_user(&mut self, new_user: NewUserInput) -> actix_web::client::ClientResponse {
+        fn create_user(&mut self, new_user: NewUserInput) -> ClientResponse {
             use actix_web::http;
             use std::time::Duration;
 
@@ -91,6 +118,7 @@ mod tests_tools {
                 .timeout(Duration::from_secs(2))
                 .json(new_user)
                 .unwrap();
+
             self.execute(request.send()).unwrap()
         }
     }
@@ -100,6 +128,7 @@ mod tests_tools {
 mod create_user_tests {
 
     use super::*;
+    use actix_web::HttpMessage;
 
     #[test]
     fn test_create_user() {
@@ -128,8 +157,14 @@ mod create_user_tests {
         };
 
         let response = srv.create_user(new_user);
+        let bytes = srv.execute(response.body()).unwrap();
+        let error_data: CreateUserHttpError = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            error_data.code,
+            CreateUserErrorCode::UserAlreadyExists as u32
+        );
 
-        assert!(response.status().is_server_error());
+        assert!(response.status().is_client_error());
     }
 }
 

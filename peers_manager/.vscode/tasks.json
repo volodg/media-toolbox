@@ -24,6 +24,22 @@
             "problemMatcher": [
                 "$rustc"
             ],
+            "options": {
+                "env": {
+                    "RUSTFLAGS": "-Aproc-macro-derive-resolution-fallback",
+                }
+            }
+        },
+        {
+            "type": "cargo",
+            "label": "cargo test",
+            "command": "cargo",
+            "args": [
+                "test"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -31,6 +47,7 @@
             "options": {
                 "env": {
                     "RUSTFLAGS": "-Aproc-macro-derive-resolution-fallback",
+                    "RUST_BACKTRACE": "full",
                 }
             }
         },

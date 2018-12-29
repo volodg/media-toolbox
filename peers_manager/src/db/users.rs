@@ -21,8 +21,14 @@ pub struct CreateUser {
     pub about: String,
 }
 
+#[derive(Debug)]
+pub enum CreateUserError {
+    UserAlreadyExists,
+    DbError(diesel::result::Error),
+}
+
 impl Message for CreateUser {
-    type Result = Result<models::User, Error>;
+    type Result = Result<models::User, CreateUserError>;
 }
 
 impl Actor for DbExecutor {
@@ -30,7 +36,7 @@ impl Actor for DbExecutor {
 }
 
 impl Handler<CreateUser> for DbExecutor {
-    type Result = Result<models::User, Error>;
+    type Result = Result<models::User, CreateUserError>;
 
     fn handle(&mut self, msg: CreateUser, _: &mut Self::Context) -> Self::Result {
         use self::schema::users::dsl::*;
@@ -43,12 +49,23 @@ impl Handler<CreateUser> for DbExecutor {
 
         let conn = &self.0.get().unwrap();
 
-        let result = diesel::insert_into(users)
+        diesel::insert_into(users)
             .values(&new_user)
-            .get_result(conn)
-            .map_err(|_| error::ErrorInternalServerError("Error inserting person"))?;
+            .get_result::<models::User>(conn)
+            .map_err(|db_error: diesel::result::Error| {
+                match &db_error {
+                    diesel::result::Error::DatabaseError(
+                        diesel::result::DatabaseErrorKind::UniqueViolation,
+                        db_error,
+                    ) => match db_error.constraint_name() {
+                        Some("email") => return CreateUserError::UserAlreadyExists,
+                        _ => {}
+                    },
+                    _ => {}
+                };
 
-        Ok(result)
+                CreateUserError::DbError(db_error)
+            })
     }
 }
 
