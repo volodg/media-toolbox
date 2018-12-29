@@ -3,6 +3,7 @@ use super::super::app::AppState;
 use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
+//use actix_web::Request;
 
 use super::super::super::db::users::{CreateUser, CreateUserError, LoginResponse};
 
@@ -23,45 +24,70 @@ struct CreateUserHttpError {
     details: String,
 }
 
-/// Async request handler
+use super::super::super::web::email_validator::{ValidateEmail, ValidateExecutor};
+use db::users::DbExecutor;
+
 pub fn create_user(
     (new_user, state): (Json<NewUserInput>, State<AppState>),
 ) -> FutureResponse<HttpResponse> {
+    let db = state.db.clone();
+
+    Box::new(
+        validate_email_request(state.email_validator.clone(), &new_user.email)
+            .and_then(move |_validated| db_create_user(db, new_user)),
+    )
+}
+
+use super::super::super::web::email_validator::publicsuffix::Error as ValidateError;
+
+fn validate_email_request(
+    validator: actix::Addr<ValidateExecutor>,
+    email: &str,
+) -> impl Future<Item = Result<bool, ValidateError>, Error = actix_web::error::Error> {
+    let validate_email = ValidateEmail {
+        email: email.to_string(),
+    };
+    validator.send(validate_email).from_err()
+}
+
+/// Async request handler
+fn db_create_user(
+    db: actix::Addr<DbExecutor>,
+    new_user: Json<NewUserInput>,
+) -> FutureResponse<HttpResponse> {
     // send async `CreateUser` message to a `DbExecutor`
-    state
-        .db
-        .send(CreateUser {
-            name: new_user.name.clone(),
-            email: new_user.email.clone(),
-            about: new_user.about.clone(),
-        })
-        .and_then(|res| match res {
-            Ok(user) => {
-                let response = LoginResponse {
-                    token: Some(user.id),
-                };
-                Ok(HttpResponse::Ok().json(response))
-            }
-            Err(error) => {
-                use http::StatusCode;
-                Ok(match error {
-                    CreateUserError::UserAlreadyExists => {
-                        let response = HttpResponse::new(StatusCode::BAD_REQUEST);
-                        let mut builder = response.into_builder();
+    db.send(CreateUser {
+        name: new_user.name.clone(),
+        email: new_user.email.clone(),
+        about: new_user.about.clone(),
+    })
+    .and_then(|res| match res {
+        Ok(user) => {
+            let response = LoginResponse {
+                token: Some(user.id),
+            };
+            Ok(HttpResponse::Ok().json(response))
+        }
+        Err(error) => {
+            use http::StatusCode;
+            Ok(match error {
+                CreateUserError::UserAlreadyExists => {
+                    let response = HttpResponse::new(StatusCode::BAD_REQUEST);
+                    let mut builder = response.into_builder();
 
-                        let error = CreateUserHttpError {
-                            code: CreateUserErrorCode::UserAlreadyExists as u32,
-                            details: "user already exists".to_string(),
-                        };
+                    let error = CreateUserHttpError {
+                        code: CreateUserErrorCode::UserAlreadyExists as u32,
+                        details: "user already exists".to_string(),
+                    };
 
-                        builder.json(error)
-                    }
-                    CreateUserError::DbError(_) => HttpResponse::InternalServerError().into(),
-                })
-            }
-        })
-        .from_err()
-        .responder()
+                    builder.json(error)
+                }
+                CreateUserError::DbError(_) => HttpResponse::InternalServerError().into(),
+            })
+        }
+    })
+    .from_err()
+    .responder()
 }
 
 #[cfg(test)]
@@ -71,7 +97,6 @@ mod tests_tools {
     use super::*;
     use actix_web::client::ClientResponse;
     use actix_web::test::TestServer;
-    use db::users::DbExecutor;
     use diesel::prelude::*;
 
     fn create_db_executor() -> DbExecutor {
@@ -90,8 +115,14 @@ mod tests_tools {
         use actix::sync::SyncArbiter;
 
         TestServer::build_with_state(|| {
-            let addr = SyncArbiter::start(3, || create_db_executor());
-            AppState { db: addr }
+            let addr1 = SyncArbiter::start(3, || create_db_executor());
+            let addr2 = SyncArbiter::start(3, || {
+                super::super::super::email_validator::ValidateExecutor(None)
+            });
+            AppState {
+                db: addr1,
+                email_validator: addr2,
+            }
         })
         .start(|app| {
             app.resource("/users/create_user", |r| r.with(create_user));
@@ -118,7 +149,7 @@ mod tests_tools {
             let request = self
                 .client(http::Method::POST, "/users/create_user")
                 .header(http::header::CONTENT_TYPE, "application/json")
-                .timeout(Duration::from_secs(2))
+                .timeout(Duration::from_secs(10))
                 .json(new_user)
                 .unwrap();
 

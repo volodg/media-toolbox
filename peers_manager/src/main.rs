@@ -44,21 +44,26 @@ fn main() {
         .build(manager)
         .expect("Failed to create pool.");
 
-    let addr = SyncArbiter::start(3, move || DbExecutor(pool.clone()));
+    let addr1 = SyncArbiter::start(3, move || DbExecutor(pool.clone()));
+
+    let addr2 = SyncArbiter::start(3, || web::email_validator::ValidateExecutor(None));
 
     // Start http server
     server::new(move || {
-        App::with_state(AppState { db: addr.clone() })
-            .middleware(middleware::Logger::default())
-            .resource("/users/create_user", |r| {
-                r.method(http::Method::POST).with(create_user)
-            })
-            .resource("/users/login", |r| {
-                r.method(http::Method::POST).with(login_user)
-            })
-            .resource("/users/search", |r| {
-                r.method(http::Method::POST).with(user_search)
-            })
+        App::with_state(AppState {
+            db: addr1.clone(),
+            email_validator: addr2.clone(),
+        })
+        .middleware(middleware::Logger::default())
+        .resource("/users/create_user", |r| {
+            r.method(http::Method::POST).with(create_user)
+        })
+        .resource("/users/login", |r| {
+            r.method(http::Method::POST).with(login_user)
+        })
+        .resource("/users/search", |r| {
+            r.method(http::Method::POST).with(user_search)
+        })
     })
     .bind("127.0.0.1:8080")
     .unwrap()

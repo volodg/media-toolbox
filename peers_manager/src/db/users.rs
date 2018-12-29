@@ -1,6 +1,4 @@
 //! Db executor actor
-//extern crate actix;
-
 use actix::prelude::*;
 use actix_web::*;
 use diesel;
