@@ -16,81 +16,20 @@ extern crate r2d2;
 
 use actix::prelude::*;
 use actix_web::{
-    http, middleware, server, App, AsyncResponder, FutureResponse, HttpResponse,
-    State, Json,
+    http, middleware, server, App
 };
 
-use diesel::prelude::*;
+use diesel::prelude::PgConnection;
 use diesel::r2d2::ConnectionManager;
-use futures::Future;
 
 mod db;
 mod models;
 mod schema;
+mod web;
 
-use db::users::{CreateUser, LoginWithEmail, SearchWithKeyword, DbExecutor};
-
-/// State with DbExecutor address
-struct AppState {
-    db: Addr<DbExecutor>,
-}
-
-#[derive(Deserialize)]
-struct NewUserInput {
-    name: String,
-    email: String,
-    about: String,
-}
-
-/// Async request handler
-fn create_user(
-    (new_user, state): (Json<NewUserInput>, State<AppState>),
-) -> FutureResponse<HttpResponse> {
-    // send async `CreateUser` message to a `DbExecutor`
-    state
-        .db
-        .send(CreateUser {
-            name: new_user.name.clone(),
-            email: new_user.email.clone(),
-            about: new_user.about.clone(),
-        })
-        .from_err()
-        .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
-}
-
-fn login_user(
-    (login, state): (Json<LoginWithEmail>, State<AppState>),
-) -> FutureResponse<HttpResponse> {
-    // send async `LoginWithEmail` message to a `DbExecutor`
-    state
-        .db
-        .send(login.into_inner())
-        .from_err()
-        .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
-}
-
-fn user_search(
-    (search, state): (Json<SearchWithKeyword>, State<AppState>),
-) -> FutureResponse<HttpResponse> {
-    // send async `SearchWithKeyword` message to a `DbExecutor`
-    state
-        .db
-        .send(search.into_inner())
-        .from_err()
-        .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
-}
+use db::users::DbExecutor;
+use web::app::AppState;
+use web::users::{create_user, login_user, user_search};
 
 fn main() {
     ::std::env::set_var("RUST_LOG", "actix_web=info");
