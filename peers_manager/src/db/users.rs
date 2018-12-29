@@ -107,11 +107,14 @@ impl Handler<SearchWithKeyword> for DbExecutor {
         let enquoted_keyword = enquote::enquote('%', &msg.keyword);
 
         let results = schema::users::table
-            .filter(name.like(&enquoted_keyword).or(about.like(&enquoted_keyword)).or(email.eq(&msg.keyword)))
+            .filter(
+                name.like(&enquoted_keyword)
+                    .or(about.like(&enquoted_keyword))
+                    .or(email.eq(&msg.keyword)),
+            )
             .get_results::<models::User>(conn)
             .map_err(|_| error::ErrorInternalServerError("Error user search"))?;
 
         Ok(results)
     }
 }
-

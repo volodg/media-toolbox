@@ -19,3 +19,6 @@ diesel = { version = "1.3.3", features = ["postgres", "r2d2"] }
 r2d2 = "0.8"
 
 enquote = "1.0.3"
+
+[dev-dependencies]
+mime = "0.3.12"

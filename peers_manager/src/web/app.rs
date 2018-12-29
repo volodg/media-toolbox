@@ -1,4 +1,3 @@
-
 use actix::prelude::Addr;
 use db::users::DbExecutor;
 

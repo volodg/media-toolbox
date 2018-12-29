@@ -6,8 +6,10 @@
 //! of them can run in parallel and process messages from same queue.
 extern crate serde;
 extern crate serde_json;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate diesel;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate diesel;
 extern crate actix;
 extern crate actix_web;
 extern crate env_logger;
@@ -15,9 +17,7 @@ extern crate futures;
 extern crate r2d2;
 
 use actix::prelude::*;
-use actix_web::{
-    http, middleware, server, App
-};
+use actix_web::{http, middleware, server, App};
 
 use diesel::prelude::PgConnection;
 use diesel::r2d2::ConnectionManager;
@@ -47,14 +47,21 @@ fn main() {
 
     // Start http server
     server::new(move || {
-        App::with_state(AppState{db: addr.clone()})
+        App::with_state(AppState { db: addr.clone() })
             .middleware(middleware::Logger::default())
-            .resource("/users/create_user", |r| r.method(http::Method::POST).with(create_user))
-            .resource("/users/login", |r| r.method(http::Method::POST).with(login_user))
-            .resource("/users/search", |r| r.method(http::Method::POST).with(user_search))
-    }).bind("127.0.0.1:8080")
-        .unwrap()
-        .start();
+            .resource("/users/create_user", |r| {
+                r.method(http::Method::POST).with(create_user)
+            })
+            .resource("/users/login", |r| {
+                r.method(http::Method::POST).with(login_user)
+            })
+            .resource("/users/search", |r| {
+                r.method(http::Method::POST).with(user_search)
+            })
+    })
+    .bind("127.0.0.1:8080")
+    .unwrap()
+    .start();
 
     println!("Started http server: 127.0.0.1:8080");
     let _ = sys.run();
