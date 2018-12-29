@@ -74,7 +74,7 @@ pub struct LoginWithEmail {
     pub email: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct LoginResponse {
     pub token: Option<i64>,
 }

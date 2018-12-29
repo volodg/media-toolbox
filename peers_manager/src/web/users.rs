@@ -4,7 +4,9 @@ use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
 
-use super::super::db::users::{CreateUser, CreateUserError, LoginWithEmail, SearchWithKeyword};
+use super::super::db::users::{
+    CreateUser, CreateUserError, LoginResponse, LoginWithEmail, SearchWithKeyword,
+};
 
 #[derive(Deserialize, Serialize)]
 pub struct NewUserInput {
@@ -36,7 +38,12 @@ pub fn create_user(
             about: new_user.about.clone(),
         })
         .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
+            Ok(user) => {
+                let response = LoginResponse {
+                    token: Some(user.id),
+                };
+                Ok(HttpResponse::Ok().json(response))
+            }
             Err(error) => {
                 use http::StatusCode;
                 Ok(match error {
@@ -85,9 +92,7 @@ mod tests_tools {
         use actix::sync::SyncArbiter;
 
         TestServer::build_with_state(|| {
-            // start diesel actors
             let addr = SyncArbiter::start(3, || create_db_executor());
-            // then we can construct custom state, or it could be `()`
             AppState { db: addr }
         })
         .start(|app| {
@@ -138,7 +143,7 @@ mod create_user_tests {
 
         let mut srv = create_test_server();
 
-        let email = "email 1";
+        let email = "test@gmail.com";
 
         let new_user = NewUserInput {
             name: "name 1".to_string(),
@@ -147,7 +152,11 @@ mod create_user_tests {
         };
 
         let response = srv.create_user(new_user);
+        let bytes = srv.execute(response.body()).unwrap();
+        let token_data: LoginResponse = serde_json::from_slice(&bytes).unwrap();
+        let token = token_data.token.unwrap();
 
+        assert!(token > 0);
         assert!(response.status().is_success());
 
         let new_user = NewUserInput {
