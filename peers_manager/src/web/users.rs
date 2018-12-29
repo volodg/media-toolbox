@@ -91,8 +91,7 @@ mod tests_tools {
                 .timeout(Duration::from_secs(2))
                 .json(new_user)
                 .unwrap();
-            let response = self.execute(request.send()).unwrap();
-            response
+            self.execute(request.send()).unwrap()
         }
     }
 }
@@ -110,15 +109,27 @@ mod create_user_tests {
 
         let mut srv = create_test_server();
 
+        let email = "email 1";
+
         let new_user = NewUserInput {
-            name: String::from("name 1"),
-            email: String::from("email 1"),
-            about: String::from("about 1"),
+            name: "name 1".to_string(),
+            email: email.to_string(),
+            about: "about 1".to_string(),
         };
 
         let response = srv.create_user(new_user);
 
         assert!(response.status().is_success());
+
+        let new_user = NewUserInput {
+            name: "name 2".to_string(),
+            email: email.to_string(),
+            about: "about 2".to_string(),
+        };
+
+        let response = srv.create_user(new_user);
+
+        assert!(response.status().is_server_error());
     }
 }
 
