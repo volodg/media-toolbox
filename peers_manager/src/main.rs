@@ -37,7 +37,7 @@ fn main() {
     let sys = actix::System::new("diesel-example");
 
     // Start 3 db executor actors
-    let database_url = "postgres://postgres:docker@localhost:5432/peers_test";
+    let database_url = "postgres://postgres:docker@localhost:5432/peers_dev";
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
         .build(manager)
