@@ -1,12 +1,10 @@
-use super::app::AppState;
+use super::super::app::AppState;
 
 use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
 
-use super::super::db::users::{
-    CreateUser, CreateUserError, LoginResponse, LoginWithEmail, SearchWithKeyword,
-};
+use super::super::super::db::users::{CreateUser, CreateUserError, LoginResponse};
 
 #[derive(Deserialize, Serialize)]
 pub struct NewUserInput {
@@ -103,7 +101,7 @@ mod tests_tools {
     pub fn db_clear_users() {
         let srv = create_db_executor();
         let conn = &srv.0.get().unwrap();
-        use super::super::super::schema::users::dsl::*;
+        use super::super::super::super::schema::users::dsl::*;
 
         let _ = diesel::delete(users).execute(conn);
     }
@@ -175,34 +173,4 @@ mod create_user_tests {
 
         assert!(response.status().is_client_error());
     }
-}
-
-pub fn login_user(
-    (login, state): (Json<LoginWithEmail>, State<AppState>),
-) -> FutureResponse<HttpResponse> {
-    // send async `LoginWithEmail` message to a `DbExecutor`
-    state
-        .db
-        .send(login.into_inner())
-        .from_err()
-        .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
-}
-
-pub fn user_search(
-    (search, state): (Json<SearchWithKeyword>, State<AppState>),
-) -> FutureResponse<HttpResponse> {
-    // send async `SearchWithKeyword` message to a `DbExecutor`
-    state
-        .db
-        .send(search.into_inner())
-        .from_err()
-        .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
-        })
-        .responder()
 }
