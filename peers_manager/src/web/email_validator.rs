@@ -1,6 +1,5 @@
 //! Validator executor actor
 use actix::prelude::*;
-use std::borrow::Cow;
 
 extern crate chrono;
 extern crate publicsuffix;
@@ -44,10 +43,7 @@ impl ValidateExecutor {
                 self.0 = Some(list_with_date);
                 result
             }
-            Err(_) => {
-                let test: Cow<'static, str> = String::from(email).into();
-                validate_email(test)
-            }
+            Err(_) => validate_email(email),
         }
     }
 }

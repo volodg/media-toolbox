@@ -171,8 +171,8 @@ mod tests_tools {
 #[cfg(test)]
 mod create_user_tests {
 
-    use super::*;
     use super::tests_tools::*;
+    use super::*;
     use actix_web::HttpMessage;
 
     #[test]
@@ -229,10 +229,7 @@ mod create_user_tests {
         let response = srv.create_user(new_user);
         let bytes = srv.execute(response.body()).unwrap();
         let error_data: CreateUserHttpError = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(
-            error_data.code,
-            CreateUserErrorCode::InvalidEmail as u32
-        );
+        assert_eq!(error_data.code, CreateUserErrorCode::InvalidEmail as u32);
 
         assert!(response.status().is_client_error());
     }
