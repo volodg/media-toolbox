@@ -172,12 +172,11 @@ mod tests_tools {
 mod create_user_tests {
 
     use super::*;
+    use super::tests_tools::*;
     use actix_web::HttpMessage;
 
     #[test]
     fn test_create_user() {
-        use super::tests_tools::*;
-
         db_clear_users();
 
         let mut srv = create_test_server();
@@ -210,6 +209,29 @@ mod create_user_tests {
         assert_eq!(
             error_data.code,
             CreateUserErrorCode::UserAlreadyExists as u32
+        );
+
+        assert!(response.status().is_client_error());
+    }
+
+    #[test]
+    fn test_envalid_email() {
+        db_clear_users();
+
+        let mut srv = create_test_server();
+
+        let new_user = NewUserInput {
+            name: "name 1".to_string(),
+            email: "email 1".to_string(),
+            about: "about 1".to_string(),
+        };
+
+        let response = srv.create_user(new_user);
+        let bytes = srv.execute(response.body()).unwrap();
+        let error_data: CreateUserHttpError = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            error_data.code,
+            CreateUserErrorCode::InvalidEmail as u32
         );
 
         assert!(response.status().is_client_error());
