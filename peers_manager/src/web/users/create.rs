@@ -3,6 +3,7 @@ use super::super::app::AppState;
 use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
+use http::StatusCode;
 
 use super::super::super::db::users::{CreateUser, CreateUserError, LoginResponse};
 
@@ -15,6 +16,7 @@ pub struct NewUserInput {
 
 enum CreateUserErrorCode {
     UserAlreadyExists,
+    InvalidEmail,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -32,8 +34,22 @@ pub fn create_user(
     let db = state.db.clone();
 
     Box::new(
-        validate_email_request(state.email_validator.clone(), &new_user.email)
-            .and_then(move |_validated| db_create_user(db, new_user)),
+        validate_email_request(state.email_validator.clone(), &new_user.email).and_then(
+            move |email_is_valid| {
+                if email_is_valid {
+                    return db_create_user(db, new_user);
+                }
+                let response = HttpResponse::new(StatusCode::BAD_REQUEST);
+                let mut builder = response.into_builder();
+
+                let error = CreateUserHttpError {
+                    code: CreateUserErrorCode::InvalidEmail as u32,
+                    details: "email is not valid".to_string(),
+                };
+
+                Box::new(futures::future::ok(builder.json(error)))
+            },
+        ),
     )
 }
 
@@ -65,23 +81,20 @@ fn db_create_user(
             };
             Ok(HttpResponse::Ok().json(response))
         }
-        Err(error) => {
-            use http::StatusCode;
-            Ok(match error {
-                CreateUserError::UserAlreadyExists => {
-                    let response = HttpResponse::new(StatusCode::BAD_REQUEST);
-                    let mut builder = response.into_builder();
+        Err(error) => Ok(match error {
+            CreateUserError::UserAlreadyExists => {
+                let response = HttpResponse::new(StatusCode::BAD_REQUEST);
+                let mut builder = response.into_builder();
 
-                    let error = CreateUserHttpError {
-                        code: CreateUserErrorCode::UserAlreadyExists as u32,
-                        details: "user already exists".to_string(),
-                    };
+                let error = CreateUserHttpError {
+                    code: CreateUserErrorCode::UserAlreadyExists as u32,
+                    details: "user already exists".to_string(),
+                };
 
-                    builder.json(error)
-                }
-                CreateUserError::DbError(_) => HttpResponse::InternalServerError().into(),
-            })
-        }
+                builder.json(error)
+            }
+            CreateUserError::DbError(_) => HttpResponse::InternalServerError().into(),
+        }),
     })
     .from_err()
     .responder()
