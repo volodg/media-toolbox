@@ -21,6 +21,7 @@ r2d2 = "0.8"
 enquote = "1.0.3"
 publicsuffix = "1.5.2"
 chrono = "0.4.6"
+validator = "0.8.0"
 
 [dev-dependencies]
 mime = "0.3.12"

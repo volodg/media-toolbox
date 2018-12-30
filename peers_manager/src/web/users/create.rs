@@ -3,7 +3,6 @@ use super::super::app::AppState;
 use futures::Future;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
-//use actix_web::Request;
 
 use super::super::super::db::users::{CreateUser, CreateUserError, LoginResponse};
 
@@ -38,12 +37,10 @@ pub fn create_user(
     )
 }
 
-use super::super::super::web::email_validator::publicsuffix::Error as ValidateError;
-
 fn validate_email_request(
     validator: actix::Addr<ValidateExecutor>,
     email: &str,
-) -> impl Future<Item = Result<bool, ValidateError>, Error = actix_web::error::Error> {
+) -> impl Future<Item = bool, Error = actix_web::error::Error> {
     let validate_email = ValidateEmail {
         email: email.to_string(),
     };

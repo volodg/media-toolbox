@@ -1,11 +1,14 @@
 //! Validator executor actor
 use actix::prelude::*;
+use std::borrow::Cow;
 
 extern crate chrono;
-pub extern crate publicsuffix;
+extern crate publicsuffix;
+extern crate validator;
 
 use self::chrono::prelude::*;
 use self::publicsuffix::List;
+use self::validator::*;
 
 //#[derive(Copy)]
 pub struct ListWithDate {
@@ -22,7 +25,7 @@ pub struct ValidateEmail {
 }
 
 impl Message for ValidateEmail {
-    type Result = Result<bool, publicsuffix::Error>;
+    type Result = bool;
 }
 
 impl Actor for ValidateExecutor {
@@ -30,25 +33,29 @@ impl Actor for ValidateExecutor {
 }
 
 impl ValidateExecutor {
-    fn update_data(&mut self, email: &str) -> Result<bool, publicsuffix::Error> {
-        let list = List::fetch()?;
-
-        let result = list.parse_email(email).is_ok();
-
-        let list_with_date = ListWithDate {
-            list: list,
-            date: Utc::now(),
-        };
-        self.0 = Some(list_with_date);
-
-        Ok(result)
+    fn update_data(&mut self, email: &str) -> bool {
+        match List::fetch() {
+            Ok(list) => {
+                let result = list.parse_email(email).is_ok();
+                let list_with_date = ListWithDate {
+                    list: list,
+                    date: Utc::now(),
+                };
+                self.0 = Some(list_with_date);
+                result
+            }
+            Err(_) => {
+                let test: Cow<'static, str> = String::from(email).into();
+                validate_email(test)
+            }
+        }
     }
 }
 
 impl Handler<ValidateEmail> for ValidateExecutor {
-    type Result = Result<bool, publicsuffix::Error>;
+    type Result = bool;
 
-    fn handle(&mut self, msg: ValidateEmail, _: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ValidateEmail, _: &mut Self::Context) -> bool {
         let date: Option<DateTime<Utc>> = self.0.as_ref().map(|el| el.date);
 
         let one_day = chrono::Duration::days(1);
@@ -56,13 +63,13 @@ impl Handler<ValidateEmail> for ValidateExecutor {
         match date {
             Some(ref date) => {
                 if Utc::now() - *date <= one_day {
-                    return Ok(self
+                    return self
                         .0
                         .as_ref()
                         .unwrap()
                         .list
                         .parse_email(&msg.email)
-                        .is_ok());
+                        .is_ok();
                 }
             }
             None => {}
