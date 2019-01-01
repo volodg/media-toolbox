@@ -9,7 +9,6 @@ use self::chrono::prelude::*;
 use self::publicsuffix::List;
 use self::validator::*;
 
-//#[derive(Copy)]
 pub struct ListWithDate {
     list: List,
     date: DateTime<Utc>,
@@ -52,25 +51,20 @@ impl Handler<ValidateEmail> for ValidateExecutor {
     type Result = bool;
 
     fn handle(&mut self, msg: ValidateEmail, _: &mut Self::Context) -> bool {
-        let date: Option<DateTime<Utc>> = self.0.as_ref().map(|el| el.date);
-
         let one_day = chrono::Duration::days(1);
-
-        match date {
-            Some(ref date) => {
-                if Utc::now() - *date <= one_day {
-                    return self
-                        .0
-                        .as_ref()
-                        .unwrap()
-                        .list
-                        .parse_email(&msg.email)
-                        .is_ok();
-                }
+        let result = self.0.as_ref().map(|el| {
+            if Utc::now() - el.date <= one_day {
+                Some(el.list.parse_email(&msg.email).is_ok())
+            } else {
+                None
             }
-            None => {}
+        });
+        match result {
+            Some(result) => match result {
+                Some(result) => result,
+                None => self.update_data(&msg.email)
+            },
+            None => self.update_data(&msg.email)
         }
-
-        self.update_data(&msg.email)
     }
 }
