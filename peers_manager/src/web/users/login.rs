@@ -5,7 +5,7 @@ use http::StatusCode;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
 
-use super::super::super::db::users::{LoginWithEmail, LoginError};
+use super::super::super::db::users::{LoginError, LoginWithEmail};
 
 pub enum LoginErrorCode {
     InvalidCredentials,
@@ -48,9 +48,9 @@ pub fn login_user(
 #[cfg(test)]
 mod create_user_tests {
 
-    use super::*;
     use super::super::create::*;
     use super::super::tests_tools::*;
+    use super::*;
     use actix_web::client::ClientResponse;
     use actix_web::test::TestServer;
 
