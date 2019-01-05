@@ -52,12 +52,15 @@ impl Handler<ValidateEmail> for ValidateExecutor {
 
     fn handle(&mut self, msg: ValidateEmail, _: &mut Self::Context) -> bool {
         let one_day = chrono::Duration::days(1);
-        self.0.as_ref().and_then(|el| {
-            if Utc::now() - el.date <= one_day {
-                Some(el.list.parse_email(&msg.email).is_ok())
-            } else {
-                None
-            }
-        }).unwrap_or_else(|| {self.update_data(&msg.email)})
+        self.0
+            .as_ref()
+            .and_then(|el| {
+                if Utc::now() - el.date <= one_day {
+                    Some(el.list.parse_email(&msg.email).is_ok())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| self.update_data(&msg.email))
     }
 }

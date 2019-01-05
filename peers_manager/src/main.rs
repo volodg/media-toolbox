@@ -30,7 +30,8 @@ mod web;
 use db::users::DbExecutor;
 use web::app::AppState;
 use web::users::create::create_user;
-use web::users::handlers::{login_user, user_search};
+use web::users::login::login_user;
+use web::users::search::user_search;
 
 fn main() {
     ::std::env::set_var("RUST_LOG", "actix_web=info");
