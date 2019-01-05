@@ -76,9 +76,7 @@ fn db_create_user(
     })
     .and_then(|res| match res {
         Ok(user) => {
-            let response = LoginResponse {
-                token: Some(user.id),
-            };
+            let response = LoginResponse { token: user.id };
             Ok(HttpResponse::Ok().json(response))
         }
         Err(error) => Ok(match error {

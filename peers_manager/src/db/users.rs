@@ -50,7 +50,7 @@ impl Handler<CreateUser> for DbExecutor {
         diesel::insert_into(users)
             .values(&new_user)
             .get_result::<models::User>(conn)
-            .map_err(|db_error: diesel::result::Error| {
+            .map_err(|db_error| {
                 match &db_error {
                     diesel::result::Error::DatabaseError(
                         diesel::result::DatabaseErrorKind::UniqueViolation,
@@ -74,15 +74,21 @@ pub struct LoginWithEmail {
 
 #[derive(Serialize, Deserialize)]
 pub struct LoginResponse {
-    pub token: Option<i64>,
+    pub token: i64,
+}
+
+#[derive(Debug)]
+pub enum LoginError {
+    InvalidCredentials,
+    DbError(diesel::result::Error),
 }
 
 impl Message for LoginWithEmail {
-    type Result = Result<LoginResponse, Error>;
+    type Result = Result<LoginResponse, LoginError>;
 }
 
 impl Handler<LoginWithEmail> for DbExecutor {
-    type Result = Result<LoginResponse, Error>;
+    type Result = Result<LoginResponse, LoginError>;
 
     fn handle(&mut self, msg: LoginWithEmail, _: &mut Self::Context) -> Self::Result {
         use self::schema::users::dsl::*;
@@ -94,11 +100,12 @@ impl Handler<LoginWithEmail> for DbExecutor {
             .select(id)
             .first(conn)
             .optional()
-            .map_err(|_| error::ErrorInternalServerError("Error login with email"))?;
+            .map_err(|db_error| LoginError::DbError(db_error))?;
 
-        let result = LoginResponse { token };
-
-        Ok(result)
+        match token {
+            Some(token) => Ok(LoginResponse { token }),
+            None => Err(LoginError::InvalidCredentials),
+        }
     }
 }
 

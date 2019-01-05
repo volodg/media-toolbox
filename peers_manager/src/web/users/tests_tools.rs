@@ -72,7 +72,7 @@ impl UsersWebMethods for TestServer {
         let response = self.create_user(new_user);
         let bytes = self.execute(response.body()).unwrap();
         let token_data: LoginResponse = serde_json::from_slice(&bytes).unwrap();
-        let token = token_data.token.unwrap();
+        let token = token_data.token;
 
         assert!(token > 0);
         assert!(response.status().is_success());

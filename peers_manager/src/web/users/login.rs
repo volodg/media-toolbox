@@ -70,7 +70,7 @@ mod create_user_tests {
         let response = login_user(&mut srv, email);
         let bytes = srv.execute(response.body()).unwrap();
         let token_data: LoginResponse = serde_json::from_slice(&bytes).unwrap();
-        let token = token_data.token.unwrap();
+        let token = token_data.token;
         assert_eq!(token, new_user_token);
     }
 
