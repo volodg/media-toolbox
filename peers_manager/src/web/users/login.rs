@@ -1,10 +1,21 @@
 use super::super::app::AppState;
 
 use futures::Future;
+use http::StatusCode;
 
 use actix_web::{AsyncResponder, FutureResponse, HttpResponse, Json, State};
 
-use super::super::super::db::users::LoginWithEmail;
+use super::super::super::db::users::{LoginWithEmail, LoginError};
+
+pub enum LoginErrorCode {
+    InvalidCredentials,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LoginHttpError {
+    pub code: u32,
+    details: String,
+}
 
 pub fn login_user(
     (login, state): (Json<LoginWithEmail>, State<AppState>),
@@ -15,8 +26,21 @@ pub fn login_user(
         .send(login.into_inner())
         .from_err()
         .and_then(|res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().json(user)),
-            Err(_) => Ok(HttpResponse::InternalServerError().into()),
+            Ok(token) => Ok(HttpResponse::Ok().json(token)),
+            Err(error) => Ok(match error {
+                LoginError::InvalidCredentials => {
+                    let response = HttpResponse::new(StatusCode::BAD_REQUEST);
+                    let mut builder = response.into_builder();
+
+                    let error = LoginHttpError {
+                        code: LoginErrorCode::InvalidCredentials as u32,
+                        details: "invalid credentials".to_string(),
+                    };
+
+                    builder.json(error)
+                }
+                LoginError::DbError(_) => HttpResponse::InternalServerError().into(),
+            }),
         })
         .responder()
 }
@@ -24,6 +48,7 @@ pub fn login_user(
 #[cfg(test)]
 mod create_user_tests {
 
+    use super::*;
     use super::super::create::*;
     use super::super::tests_tools::*;
     use actix_web::client::ClientResponse;
@@ -49,7 +74,7 @@ mod create_user_tests {
     }
 
     #[test]
-    fn test_login() {
+    fn test_succees_login() {
         use super::super::super::super::db::users::LoginResponse;
         use actix_web::HttpMessage;
 
@@ -57,7 +82,7 @@ mod create_user_tests {
 
         let mut srv = create_test_server();
 
-        let email = "test_login_2@gmail.com";
+        let email = "test_login_1@gmail.com";
 
         let new_user = NewUserInput {
             name: "name 1".to_string(),
@@ -74,4 +99,21 @@ mod create_user_tests {
         assert_eq!(token, new_user_token);
     }
 
+    #[test]
+    fn test_failed_login() {
+        use actix_web::HttpMessage;
+
+        db_clear_users();
+
+        let mut srv = create_test_server();
+
+        let email = "test_login_10@gmail.com";
+
+        let response = login_user(&mut srv, email);
+        let bytes = srv.execute(response.body()).unwrap();
+        let error_data: LoginHttpError = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(error_data.code, LoginErrorCode::InvalidCredentials as u32);
+
+        assert!(response.status().is_client_error());
+    }
 }

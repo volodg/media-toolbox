@@ -138,7 +138,7 @@ mod create_user_tests {
     }
 
     #[test]
-    fn test_envalid_email() {
+    fn test_invalid_email() {
         db_clear_users();
 
         let mut srv = create_test_server();

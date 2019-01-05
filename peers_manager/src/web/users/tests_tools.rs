@@ -27,8 +27,8 @@ pub fn create_test_server() -> TestServer {
     use actix::sync::SyncArbiter;
 
     TestServer::build_with_state(|| {
-        let addr1 = SyncArbiter::start(3, || create_db_executor());
-        let addr2 = SyncArbiter::start(3, || super::super::email_validator::ValidateExecutor(None));
+        let addr1 = SyncArbiter::start(1, || create_db_executor());
+        let addr2 = SyncArbiter::start(1, || super::super::email_validator::ValidateExecutor(None));
         AppState {
             db: addr1,
             email_validator: addr2,
