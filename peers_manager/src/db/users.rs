@@ -67,7 +67,7 @@ impl Handler<CreateUser> for DbExecutor {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LoginWithEmail {
     pub email: String,
 }

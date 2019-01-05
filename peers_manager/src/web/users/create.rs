@@ -9,19 +9,19 @@ use super::super::super::db::users::{CreateUser, CreateUserError, LoginResponse}
 
 #[derive(Deserialize, Serialize)]
 pub struct NewUserInput {
-    name: String,
-    email: String,
-    about: String,
+    pub name: String,
+    pub email: String,
+    pub about: String,
 }
 
-enum CreateUserErrorCode {
+pub enum CreateUserErrorCode {
     UserAlreadyExists,
     InvalidEmail,
 }
 
 #[derive(Serialize, Deserialize)]
-struct CreateUserHttpError {
-    code: u32,
+pub struct CreateUserHttpError {
+    pub code: u32,
     details: String,
 }
 
@@ -113,21 +113,14 @@ mod create_user_tests {
 
         let mut srv = create_test_server();
 
-        let email = "test@gmail.com";
+        let email = "test_create@gmail.com";
 
         let new_user = NewUserInput {
             name: "name 1".to_string(),
             email: email.to_string(),
             about: "about 1".to_string(),
         };
-
-        let response = srv.create_user(new_user);
-        let bytes = srv.execute(response.body()).unwrap();
-        let token_data: LoginResponse = serde_json::from_slice(&bytes).unwrap();
-        let token = token_data.token.unwrap();
-
-        assert!(token > 0);
-        assert!(response.status().is_success());
+        srv.test_create_new_user(new_user);
 
         let new_user = NewUserInput {
             name: "name 2".to_string(),

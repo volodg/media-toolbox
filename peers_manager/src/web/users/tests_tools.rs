@@ -1,12 +1,15 @@
-
 extern crate mime;
 
-use super::super::app::AppState;
-use db::users::DbExecutor;
 use actix_web::client::ClientResponse;
 use actix_web::test::TestServer;
+use actix_web::HttpMessage;
+
+use super::super::super::db::users::LoginResponse;
+use super::super::app::AppState;
+use super::create::{create_user, NewUserInput};
+use super::login::login_user;
+use db::users::DbExecutor;
 use diesel::prelude::*;
-use super::create::{NewUserInput, create_user};
 
 fn create_db_executor() -> DbExecutor {
     use diesel::prelude::PgConnection;
@@ -25,16 +28,15 @@ pub fn create_test_server() -> TestServer {
 
     TestServer::build_with_state(|| {
         let addr1 = SyncArbiter::start(3, || create_db_executor());
-        let addr2 = SyncArbiter::start(3, || {
-            super::super::email_validator::ValidateExecutor(None)
-        });
+        let addr2 = SyncArbiter::start(3, || super::super::email_validator::ValidateExecutor(None));
         AppState {
             db: addr1,
             email_validator: addr2,
         }
     })
     .start(|app| {
-        app.resource("/users/create_user", |r| r.with(create_user));
+        app.resource("/users/create_user", |r| r.with(create_user))
+            .resource("/users/login", |r| r.with(login_user));
     })
 }
 
@@ -48,6 +50,7 @@ pub fn db_clear_users() {
 
 pub trait UsersWebMethods {
     fn create_user(&mut self, new_user: NewUserInput) -> ClientResponse;
+    fn test_create_new_user(&mut self, new_user: NewUserInput) -> i64;
 }
 
 impl UsersWebMethods for TestServer {
@@ -63,5 +66,17 @@ impl UsersWebMethods for TestServer {
             .unwrap();
 
         self.execute(request.send()).unwrap()
+    }
+
+    fn test_create_new_user(&mut self, new_user: NewUserInput) -> i64 {
+        let response = self.create_user(new_user);
+        let bytes = self.execute(response.body()).unwrap();
+        let token_data: LoginResponse = serde_json::from_slice(&bytes).unwrap();
+        let token = token_data.token.unwrap();
+
+        assert!(token > 0);
+        assert!(response.status().is_success());
+
+        token
     }
 }
